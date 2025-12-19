@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>大课间值日表</title>
+    <!-- 小程序风格图标 + 样式 -->
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/weui-wxss/2.3.0/weui.min.css">
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 小程序核心样式：白色背景、卡片阴影、圆角、间距 */
+        body {
+            background-color: #f5f5f5;
+            font-size: 16px;
+            padding-bottom: 30px;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        /* 小程序顶部导航栏（模拟） */
+        .weui-nav-bar {
+            background-color: #1989fa;
+            color: #fff;
+            height: 44px;
+            line-height: 44px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 500;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        /* 卡片样式（小程序标准） */
+        .weui-cells {
+            margin-bottom: 15px;
+            background-color: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .weui-cell__hd {
+            color: #1989fa;
+            font-size: 17px;
+            font-weight: 500;
+        }
+        /* 表格样式（小程序风格） */
+        .duty-table {
+            table-layout: fixed;
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+        }
+        .duty-table th, .duty-table td {
+            text-align: center;
+            vertical-align: middle;
+            padding: 14px 5px;
+            word-wrap: break-word;
+            border: 1px solid #e5e5e5;
+            font-size: 14px;
+        }
+        .duty-table th {
+            background-color: #f7f9fc;
+            color: #333;
+            font-weight: 500;
+        }
+        .duty-table td:first-child {
+            background-color: #e8f4f8;
+            color: #1989fa;
+            font-weight: 500;
+        }
+        .corner-cell {
+            background-color: #d1ecf1 !important;
+            color: #0c5460 !important;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .note-cell {
+            background-color: #fff8e1 !important;
+            text-align: left !important;
+            padding: 15px !important;
+            min-height: 80px;
+            color: #333;
+        }
+        /* 按钮样式（小程序标准） */
+        .weui-btn {
+            border-radius: 24px !important;
+            height: 48px !important;
+            line-height: 48px !important;
+            font-size: 17px !important;
+            margin-bottom: 12px !important;
+        }
+        .weui-btn_primary {
+            background-color: #1989fa !important;
+        }
+        .weui-btn_success {
+            background-color: #52c41a !important;
+        }
+        .weui-btn_warn {
+            background-color: #faad14 !important;
+        }
+        .weui-btn_danger {
+            background-color: #ff4d4f !important;
+        }
+        /* 输入框样式（小程序风格） */
+        .weui-input {
+            border-radius: 8px !important;
+            height: 48px !important;
+            padding: 0 15px !important;
+            font-size: 16px !important;
+        }
+        /* 标签样式 */
+        .tag {
+            display: inline-block;
+            background-color: #e8f4f8;
+            color: #1989fa;
+            padding: 4px 10px;
+            border-radius: 16px;
+            margin: 4px;
+            font-size: 14px;
+        }
+        /* 提示文字 */
+        .hint {
+            color: #888;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 小程序顶部导航栏（模拟原生小程序导航） -->
+    <div class="weui-nav-bar">
+        <i class="fa-solid fa-calendar-check text-white mr-2"></i>大课间值日表
+    </div>
+
+    <div class="weui-cells mt-4 px-4">
+        <div class="weui-cell weui-cell_access">
+            <div class="weui-cell__hd"><i class="fa-solid fa-users mr-2"></i>导入部员名单</div>
+            <div class="weui-cell__bd">
+                <p class="hint">支持Excel/Word，自动筛选「部员」以下人员</p>
+                <input type="file" id="fileInput" class="weui-input mt-2" accept=".xlsx,.xls,.docx" style="display:none">
+                <button onclick="document.getElementById('fileInput').click()" class="weui-btn weui-btn_primary w-100 mt-2">
+                    <i class="fa-solid fa-upload mr-2"></i>上传文件
+                </button>
+                <div class="mt-3">
+                    <p class="weui-cell__hd" style="font-size:15px">已筛选人员：</p>
+                    <div id="memberList" class="mt-2">
+                        <span class="hint">暂无人员，请先上传文件</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="weui-cells px-4">
+        <div class="weui-cell weui-cell_access">
+            <div class="weui-cell__hd"><i class="fa-solid fa-gears mr-2"></i>功能操作</div>
+            <div class="weui-cell__bd">
+                <button onclick="generateSchedule()" class="weui-btn weui-btn_success w-100">
+                    <i class="fa-solid fa-magic mr-2"></i>生成值日表
+                </button>
+                <button onclick="exportAsImage()" class="weui-btn weui-btn_primary w-100" disabled id="exportBtn">
+                    <i class="fa-solid fa-download mr-2"></i>导出图片
+                </button>
+                <button onclick="resetSchedule()" class="weui-btn weui-btn_danger w-100">
+                    <i class="fa-solid fa-trash mr-2"></i>重置数据
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="weui-cells px-4 mb-6">
+        <div class="weui-cell weui-cell_access">
+            <div class="weui-cell__hd"><i class="fa-solid fa-table mr-2"></i>值日表（2行6列）</div>
+            <div class="weui-cell__bd" style="padding:10px 0">
+                <div class="duty-table-container" style="overflow-x:auto">
+                    <table class="duty-table">
+                        <thead>
+                            <tr>
+                                <th class="corner-cell">大课间值日</th>
+                                <th>星期一</th>
+                                <th>星期二</th>
+                                <th>星期三</th>
+                                <th>星期四</th>
+                                <th>星期五</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="dutyRow">
+                                <td>值日人员1</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>注意事项</td>
+                                <td colspan="5" class="note-cell" contenteditable="true" id="noteCell">
+                                    点击编辑：1. 提前5分钟到位；2. 保持场地卫生；3. 完成后关好门窗
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 依赖脚本 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script>
+        // 本地存储键名
+        const MEMBER_KEY = 'weapp_duty_members';
+        const SCHEDULE_KEY = 'weapp_duty_schedule';
+        const NOTE_KEY = 'weapp_duty_note';
+        const KEYWORD = '部员';
+        const WEEK_DAYS = ['星期一', '星期二', '星期三', '星期四', '星期五'];
+
+        // 页面加载恢复数据
+        window.onload = function() {
+            showMembers();
+            showSchedule();
+            loadNote();
+            // 监听文件选择
+            document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+            // 监听注意事项编辑保存
+            document.getElementById('noteCell').addEventListener('blur', saveNote);
+        };
+
+        // 处理文件选择+筛选部员
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const fileExt = file.name.split('.').pop().toLowerCase();
+
+            if (fileExt === 'xlsx' || fileExt === 'xls') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    const members = filterMembers(json);
+                    handleMembers(members);
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (fileExt === 'docx') {
+                mammoth.extractRawText({ arrayBuffer: file })
+                    .then(result => {
+                        const lines = result.value.split(/[\n\r]+/).filter(line => line.trim());
+                        const json = lines.map(line => [line.trim()]);
+                        const members = filterMembers(json);
+                        handleMembers(members);
+                    })
+                    .catch(err => showToast(`解析失败：${err.message}`, 'error'));
+            } else {
+                showToast('仅支持Excel/Word文件', 'error');
+            }
+        }
+
+        // 筛选部员以下人员
+        function filterMembers(json) {
+            const members = [];
+            let startCollect = false;
+            json.forEach(row => {
+                const text = Array.isArray(row) ? row[0]?.toString().trim() || '' : row.trim() || '';
+                if (text.includes(KEYWORD)) {
+                    startCollect = true;
+                    return;
+                }
+                if (startCollect && text) {
+                    members.push(text);
+                }
+            });
+            return members;
+        }
+
+        // 处理筛选结果
+        function handleMembers(members) {
+            if (members.length === 0) {
+                showToast('未找到「部员」关键词或下方无人员', 'error');
+                return;
+            }
+            if (members.length < 10) {
+                showToast(`仅筛选${members.length}人（建议≥10人）`, 'warn');
+            } else {
+                showToast(`成功筛选${members.length}名部员`, 'success');
+            }
+            localStorage.setItem(MEMBER_KEY, JSON.stringify(members));
+            showMembers();
+        }
+
+        // 显示筛选人员
+        function showMembers() {
+            const members = JSON.parse(localStorage.getItem(MEMBER_KEY) || '[]');
+            const list = document.getElementById('memberList');
+            if (members.length === 0) {
+                list.innerHTML = '<span class="hint">暂无人员，请先上传文件</span>';
+                return;
+            }
+            let html = '';
+            members.forEach((name, i) => {
+                html += `<span class="tag">${i+1}. ${name}</span>`;
+            });
+            list.innerHTML = html;
+        }
+
+        // 生成值日表
+        function generateSchedule() {
+            const members = JSON.parse(localStorage.getItem(MEMBER_KEY) || '[]');
+            if (members.length === 0) {
+                showToast('请先上传文件筛选部员', 'error');
+                return;
+            }
+
+            // 打乱排班
+            const shuffled = [...members].sort(() => Math.random() - 0.5);
+            const duties = [];
+            let idx = 0;
+            for (let i = 0; i < 5; i++) {
+                const m1 = shuffled[idx % shuffled.length];
+                const m2 = shuffled[(idx+1) % shuffled.length];
+                duties.push(`${m1}\n${m2}`);
+                idx += 2;
+            }
+
+            localStorage.setItem(SCHEDULE_KEY, JSON.stringify(duties));
+            showSchedule();
+            showToast('值日表生成成功', 'success');
+            document.getElementById('exportBtn').disabled = false;
+        }
+
+        // 显示值日表
+        function showSchedule() {
+            const duties = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '[]');
+            const row = document.getElementById('dutyRow');
+            let tdHtml = '<td>值日人员1</td>';
+            if (duties.length > 0) {
+                duties.forEach(duty => {
+                    tdHtml += `<td>${duty.replace(/\n/g, '<br>')}</td>`;
+                });
+            } else {
+                tdHtml += '<td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>';
+            }
+            row.innerHTML = tdHtml;
+        }
+
+        // 保存/加载注意事项
+        function saveNote() {
+            const note = document.getElementById('noteCell').innerText.trim();
+            localStorage.setItem(NOTE_KEY, note);
+            showToast('注意事项已保存', 'success');
+        }
+        function loadNote() {
+            const note = localStorage.getItem(NOTE_KEY) || '点击编辑：1. 提前5分钟到位；2. 保持场地卫生；3. 完成后关好门窗';
+            document.getElementById('noteCell').innerText = note;
+        }
+
+        // 导出为图片
+        function exportAsImage() {
+            saveNote(); // 先保存注意事项
+            const table = document.querySelector('.duty-table');
+            const container = document.createElement('div');
+            container.style.padding = '20px';
+            container.style.backgroundColor = '#fff';
+            container.appendChild(table.cloneNode(true));
+            document.body.appendChild(container);
+
+            html2canvas(container, {
+                scale: 2,
+                useCORS: true,
+                logging: false
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `大课间值日表_${new Date().toLocaleDateString()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                document.body.removeChild(container);
+                showToast('图片导出成功', 'success');
+            }).catch(err => {
+                document.body.removeChild(container);
+                showToast(`导出失败：${err.message}`, 'error');
+            });
+        }
+
+        // 重置数据
+        function resetSchedule() {
+            if (confirm('确定要重置所有数据吗？')) {
+                localStorage.removeItem(MEMBER_KEY);
+                localStorage.removeItem(SCHEDULE_KEY);
+                localStorage.removeItem(NOTE_KEY);
+                showMembers();
+                showSchedule();
+                loadNote();
+                document.getElementById('exportBtn').disabled = true;
+                showToast('数据已重置', 'success');
+            }
+        }
+
+        // 小程序风格提示框（模拟wx.showToast）
+        function showToast(title, icon = 'success') {
+            // 创建提示框元素
+            const toast = document.createElement('div');
+            toast.style.position = 'fixed';
+            toast.style.bottom = '50px';
+            toast.style.left = '50%';
+            toast.style.transform = 'translateX(-50%)';
+            toast.style.backgroundColor = 'rgba(0,0,0,0.7)';
+            toast.style.color = '#fff';
+            toast.style.padding = '10px 16px';
+            toast.style.borderRadius = '20px';
+            toast.style.fontSize = '14px';
+            toast.style.zIndex = '9999';
+            toast.style.display = 'flex';
+            toast.style.alignItems = 'center';
+            toast.style.justifyContent = 'center';
+
+            // 图标
+            let iconHtml = '';
+            if (icon === 'success') iconHtml = '<i class="fa-solid fa-check mr-2"></i>';
+            if (icon === 'error') iconHtml = '<i class="fa-solid fa-times mr-2"></i>';
+            if (icon === 'warn') iconHtml = '<i class="fa-solid fa-exclamation-triangle mr-2"></i>';
+
+            toast.innerHTML = iconHtml + title;
+            document.body.appendChild(toast);
+
+            // 3秒后移除
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
